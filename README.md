@@ -5,7 +5,7 @@ This is a test version 0.2.2.
 ![image info](./src/ima1.png)
 
 The features are extracted from images using a blob detector:
-![image info](./src/ima3.png)
+![image info](./src/ima.png)
 
 In directory */src*, you will find an user guide document.
 
