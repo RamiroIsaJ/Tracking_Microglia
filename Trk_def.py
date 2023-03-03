@@ -193,3 +193,10 @@ def tracking_feat(frame, tracker, f_track, delta):
     mean_d = np.round(np.mean(np.array(move_dist)), 4)
 
     return frame, r_mse, move_dist, mean_d
+
+
+def save_images(ima_res, name_ima, path_des):
+    root_des = path_des + name_ima
+    print(root_des)
+    cv2.imwrite(root_des, ima_res)
+
