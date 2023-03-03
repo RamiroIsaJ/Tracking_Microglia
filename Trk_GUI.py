@@ -267,9 +267,9 @@ while True:
         window['_CIM_'].update(i)
         window['_MES_'].update('Tracking is running')
 
-        features_, ima_out = Chg.features_img(image, v_thresh)
+        features_, ima_out = Mcr.features_img(image)
 
-        tab_features = Chg.find_track_feat(i, features_, tab_features, d_max, d_min)
+        tab_features = Mcr.find_track_feat(i, features_, tab_features, d_max, d_min)
         if i > 10:
             print('this......' + str(tab_features.shape[0]))
                       
