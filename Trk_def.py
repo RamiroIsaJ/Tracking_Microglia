@@ -108,9 +108,9 @@ def features_img(img):
     detector = cv2.SimpleBlobDetector_create(params)
     key_points = detector.detect(img)
     features_ = []
-    for k in key_points:
-        cx = int(k.pt[0])
-        cy = int(k.pt[1])
+    for k1 in key_points:
+        cx = int(k1.pt[0])
+        cy = int(k1.pt[1])
         features_.append((cx, cy))
 
     features_ = np.asarray(sorted(features_, key=lambda k: [k[0], k[1]]))
