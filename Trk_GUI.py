@@ -3,10 +3,12 @@
 
 import PySimpleGUI as sg
 import numpy as np
+import os
 import Trk_def as Mcr
 from datetime import datetime
 from Tracker_def import Tracker
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # -------------------------------
 # Adjust size screen
@@ -91,7 +93,7 @@ eval_c, finish_, eval_press, track_c, track_press = False, False, False, False, 
 filenames, exp, path_org, type_i, tab_features, n_features, tr_features, rms_errors = [], [], [], [], [], [], [], []
 tot_dist, mean_dist, path_des = [], [], []
 i, id_sys, tracker, delta = -1, 0, None, 0
-
+results = pd.DataFrame(columns=['Mean distance', 'STD distance', 'Mean velocity', 'STD velocity'])
 # Event Loop to process "events" and get the "values" of the inputs
 while True:
     event, values = window.read(timeout=10)
@@ -110,6 +112,11 @@ while True:
             i, filenames = -1, []
             finish_, track_c, eval_c = False, False, False
             tab_features, n_features, tr_features, rms_errors, tot_dist, mean_dist, mean_vel = [], [], [], [], [], [], []
+            root_file = os.path.join(path_des, 'results_micro.csv')
+            results.to_csv(root_file, index=False)
+            print('----------------------------------------------')
+            print('..... Save data in CSV file successfully .....')
+            print('----------------------------------------------')
             window['_TIN_'].update('-- : -- : --')
             window['_TFI_'].update('-- : -- : --')
             window['_NEX_'].update('')
@@ -275,6 +282,7 @@ while True:
                       
             feat_tracking = tab_features[ini_feat:fin_feat, 2:4]
             ima_out, error, dists, mean_d = Mcr.tracking_feat(image, tracker, feat_tracking, delta)
+            print('---')
             Mcr.save_images(ima_out, name, path_des)
             rms_errors.append(error)
             tot_dist.append(np.array(dists))
@@ -295,6 +303,11 @@ while True:
         d_std = np.std(np.array(mean_dist[2:]))
         m_velocity = (np.array(mean_dist[2:])) / delta  # change 1 by 2
         v_std = np.std(m_velocity)
+        # SAVE RESULTS
+        new_row = pd.DataFrame.from_records([{'Mean distance': m_dist, 'STD distance': d_std,
+                                              'Mean velocity': m_velocity, 'STD velocity': v_std}])
+        results = pd.concat([results, new_row], ignore_index=True)
+
         window['_MER_'].update(np.round(np.mean(n_errors), 4))
         window['_MES_'].update('Tracking successfully')
 
