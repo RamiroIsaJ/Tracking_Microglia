@@ -91,9 +91,9 @@ window['_IMA_'].update(data=Mcr.bytes_(img, m1, n1))
 # ---------------------------------------------------------------------
 eval_c, finish_, eval_press, track_c, track_press = False, False, False, False, False
 filenames, exp, path_org, type_i, tab_features, n_features, tr_features, rms_errors = [], [], [], [], [], [], [], []
-tot_dist, mean_dist, path_des = [], [], []
+tot_dist, mean_dist, path_des, n_errors, m_dist, d_std, m_velocity, v_std = [], [], [], None, None, None, None, None
 i, id_sys, tracker, delta = -1, 0, None, 0
-results = pd.DataFrame(columns=['Mean distance', 'STD distance', 'Mean velocity', 'STD velocity'])
+results_csv = pd.DataFrame(columns=['Mean distance', 'STD distance', 'Mean velocity', 'STD velocity'])
 # Event Loop to process "events" and get the "values" of the inputs
 while True:
     event, values = window.read(timeout=10)
@@ -105,7 +105,7 @@ while True:
     if event is None or event == sg.WIN_CLOSED:
         break
 
-    if event == 'Finish':
+    if event == 'Finish' or finish_:
         print('FINISH')
         if finish_ or track_c or eval_c:
             window['_IMA_'].update(data=Mcr.bytes_(img, m1, n1))
@@ -113,7 +113,7 @@ while True:
             finish_, track_c, eval_c = False, False, False
             tab_features, n_features, tr_features, rms_errors, tot_dist, mean_dist, mean_vel = [], [], [], [], [], [], []
             root_file = os.path.join(path_des, 'results_micro.csv')
-            results.to_csv(root_file, index=False)
+            results_csv.to_csv(root_file, index=False)
             print('----------------------------------------------')
             print('..... Save data in CSV file successfully .....')
             print('----------------------------------------------')
@@ -139,7 +139,6 @@ while True:
         else:
             id_sys = 1
             path_org, path_des = values['_ORI_'] + '/', values['_DES_'] + '/'
-
             # -----------------------------------------------------------------
         if values['_IN2_']:
             type_i = "*.png"
@@ -278,8 +277,7 @@ while True:
 
         tab_features = Mcr.find_track_feat(i, features_, tab_features, d_max, d_min)
         if i > 10:
-            print('this......' + str(tab_features.shape[0]))
-                      
+            print('Total length features: ' + str(tab_features.shape[0]))
             feat_tracking = tab_features[ini_feat:fin_feat, 2:4]
             ima_out, error, dists, mean_d = Mcr.tracking_feat(image, tracker, feat_tracking, delta)
             print('---')
@@ -287,30 +285,33 @@ while True:
             rms_errors.append(error)
             tot_dist.append(np.array(dists))
             mean_dist.append(mean_d)
-            '''
-            window['_MER_'].update(np.round(error, 4))
-            window['_MDI_'].update(mean_d)
-            mean_vel = np.round(mean_d / delta, 4)
-            window['_MVL_'].update(mean_vel)
-            '''
+            # compute mean values
+            n_errors = np.array(rms_errors)
+            m_dist = np.array(np.cumsum(np.array(mean_dist[2:])))  # change 1 by 2
+            d_std = np.std(np.array(mean_dist[2:]))
+            m_velocity = (np.array(mean_dist[2:])) / delta  # change 1 by 2
+            v_std = np.std(m_velocity)
+            if len(m_dist) > 0:
+                # SAVE RESULTS
+                new_row_ = pd.DataFrame.from_records([{'Mean distance': np.round(m_dist[-1], 4),
+                                                       'STD distance': np.round(d_std, 4),
+                                                       'Mean velocity': np.round(np.average(m_velocity), 4),
+                                                       'STD velocity': np.round(v_std, 4)}])
+                results_csv = pd.concat([results_csv, new_row_], ignore_index=True)
+                # total distance
+                window['_MDI_'].update(np.round(m_dist[-1], 4))
+                window['_MER_'].update(np.round(d_std, 4))
+                # global mean velocity
+                mean_vel_f = np.round(np.average(m_velocity), 4)
+                window['_MVL_'].update(mean_vel_f)
+                window['_MMD_'].update(np.round(v_std, 4))
 
         window['_IMA_'].update(data=Mcr.bytes_(ima_out, m1, n1))
 
     if track_press:
         print('TRACK RESULTS')
-        n_errors = np.array(rms_errors)
-        m_dist = np.cumsum(np.array(mean_dist[2:]))  # change 1 by 2
-        d_std = np.std(np.array(mean_dist[2:]))
-        m_velocity = (np.array(mean_dist[2:])) / delta  # change 1 by 2
-        v_std = np.std(m_velocity)
-        # SAVE RESULTS
-        new_row = pd.DataFrame.from_records([{'Mean distance': m_dist, 'STD distance': d_std,
-                                              'Mean velocity': m_velocity, 'STD velocity': v_std}])
-        results = pd.concat([results, new_row], ignore_index=True)
-
         window['_MER_'].update(np.round(np.mean(n_errors), 4))
         window['_MES_'].update('Tracking successfully')
-
         f, (ax1, ax2, ax3) = plt.subplots(1, 3)
         ax1.plot(n_errors, 'o-r', label='Error_track')
         ax1.set_title('Mean of Error tracking')
@@ -333,14 +334,7 @@ while True:
         ax3.legend(loc='upper right')
         ax3.grid()
         fin_time = now.strftime("%H : %M : %S")
-        # total distance
         window['_TFI_'].update(fin_time)
-        window['_MDI_'].update(np.round(m_dist[-1], 4))
-        window['_MER_'].update(np.round(d_std, 4))
-        # global mean velocity
-        mean_vel_f = np.round(np.average(m_velocity), 4)
-        window['_MVL_'].update(mean_vel_f)
-        window['_MMD_'].update(np.round(v_std, 4))
         plt.show()
         track_press, finish_ = False, True
 
